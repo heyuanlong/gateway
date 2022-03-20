@@ -23,11 +23,11 @@ middlewares:
     options:
       '@type': type.googleapis.com/gateway.middleware.logging.v1.Logging
 endpoints:
-  - path: /helloworld/*
+  - path: /test/*
     timeout: 1s
     protocol: HTTP
     backends:
-      - target: '127.0.0.1:8000'
+      - target: '127.0.0.1:8086'
     middlewares:
       - name: circuitbreaker
         options:

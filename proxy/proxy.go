@@ -152,19 +152,25 @@ func (p *Proxy) buildMiddleware(ms []*config.Middleware, handler middleware.Hand
 	return handler, nil
 }
 
+//从配置里加载代理路由及其中间件
 func (p *Proxy) buildEndpoint(e *config.Endpoint, ms []*config.Middleware) (http.Handler, error) {
 	caller, err := p.clientFactory(e)
 	if err != nil {
 		return nil, err
 	}
+
+	//加载endpoint里指定的中间件
 	handler, err := p.buildMiddleware(e.Middlewares, caller.Do)
 	if err != nil {
 		return nil, err
 	}
+
+	//加载全局指定的中间件，  未排除endpoint里指定的中间件，可能配置不当中间件就重复了，这算是bug吧
 	handler, err = p.buildMiddleware(ms, handler)
 	if err != nil {
 		return nil, err
 	}
+
 	retryStrategy, err := prepareRetryStrategy(e)
 	if err != nil {
 		return nil, err
@@ -248,6 +254,7 @@ func (p *Proxy) buildEndpoint(e *config.Endpoint, ms []*config.Middleware) (http
 }
 
 // Update updates service endpoint.
+// 设置路由
 func (p *Proxy) Update(c *config.Gateway) error {
 	router := mux.NewRouter()
 	for _, e := range c.Endpoints {
@@ -264,7 +271,10 @@ func (p *Proxy) Update(c *config.Gateway) error {
 	return nil
 }
 
+//请求处理起点
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	LOG.Info("req start")
+	defer LOG.Info("req end")
 	defer func() {
 		if err := recover(); err != nil {
 			w.WriteHeader(http.StatusBadGateway)

@@ -83,6 +83,8 @@ func main() {
 		go ctrlLoader.Run(ctx)
 	}
 
+	//---------------------------------------------------------------
+	//配置加载器
 	confLoader, err := config.NewFileLoader(proxyConfig)
 	if err != nil {
 		LOG.Fatalf("failed to create config file loader: %v", err)
@@ -93,9 +95,15 @@ func main() {
 		LOG.Fatalf("failed to load config: %v", err)
 	}
 
+	//---------------------------------------------------------------
+	//下面是加载配置文件的endpoints
+	LOG.Infof("conf %#v", bc.String())
 	if err := p.Update(bc); err != nil {
 		LOG.Fatalf("failed to update service config: %v", err)
 	}
+
+	//---------------------------------------------------------------
+	//热加载配置文件的endpoints
 	reloader := func() error {
 		bc, err := confLoader.Load(context.Background())
 		if err != nil {
@@ -111,6 +119,7 @@ func main() {
 	}
 	confLoader.Watch(reloader)
 
+	//---------------------------------------------------------------
 	var serverHandler http.Handler = p
 	if withDebug {
 		debugService := debug.New()
