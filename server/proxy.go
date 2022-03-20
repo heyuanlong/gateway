@@ -11,11 +11,13 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+
+	gatelog "github.com/go-kratos/gateway/log"
 )
 
 var (
 	// LOG .
-	LOG = log.NewHelper(log.With(log.GetLogger(), "source", "server"))
+	LOG = log.NewHelper(log.With(gatelog.GetLogger(), "source", "server"))
 
 	readHeaderTimeout = time.Second * 10
 	readTimeout       = time.Second * 15

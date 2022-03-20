@@ -8,11 +8,13 @@ import (
 	"github.com/go-kratos/gateway/middleware"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/selector"
+
+	gatelog "github.com/go-kratos/gateway/log"
 )
 
 var (
 	// LOG .
-	LOG = log.NewHelper(log.With(log.GetLogger(), "source", "client"))
+	LOG = log.NewHelper(log.With(gatelog.GetLogger(), "source", "client"))
 )
 
 // Client is a proxy client.

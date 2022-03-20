@@ -12,10 +12,12 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+
+	gatelog "github.com/go-kratos/gateway/log"
 )
 
 var (
-	LOG = log.NewHelper(log.With(log.GetLogger(), "source", "accesslog"))
+	LOG = log.NewHelper(log.With(gatelog.GetLogger(), "source", "accesslog"))
 )
 
 func init() {

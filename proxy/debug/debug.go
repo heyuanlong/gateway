@@ -8,13 +8,15 @@ import (
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/gorilla/mux"
+
+	gatelog "github.com/go-kratos/gateway/log"
 )
 
 const (
 	_debugPrefix = "/debug"
 )
 
-var LOG = log.NewHelper(log.With(log.GetLogger(), "source", "debug"))
+var LOG = log.NewHelper(log.With(gatelog.GetLogger(), "source", "debug"))
 
 type Debuggable interface {
 	DebugHandler() http.Handler

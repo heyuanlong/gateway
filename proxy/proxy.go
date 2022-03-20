@@ -23,10 +23,12 @@ import (
 	"github.com/go-kratos/kratos/v2/transport/http/status"
 	gorillamux "github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
+
+	gatelog "github.com/go-kratos/gateway/log"
 )
 
 // LOG .
-var LOG = log.NewHelper(log.With(log.GetLogger(), "source", "proxy"))
+var LOG = log.NewHelper(log.With(gatelog.GetLogger(), "source", "proxy"))
 
 var (
 	_metricRequestsTotol = prometheus.NewCounterVec(prometheus.CounterOpts{

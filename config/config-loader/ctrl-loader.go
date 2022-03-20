@@ -19,10 +19,12 @@ import (
 	"github.com/google/uuid"
 	gorillamux "github.com/gorilla/mux"
 	"sigs.k8s.io/yaml"
+
+	gatelog "github.com/go-kratos/gateway/log"
 )
 
 var (
-	LOG = log.NewHelper(log.With(log.GetLogger(), "source", "config-loader"))
+	LOG = log.NewHelper(log.With(gatelog.GetLogger(), "source", "config-loader"))
 )
 
 type CtrlConfigLoader struct {

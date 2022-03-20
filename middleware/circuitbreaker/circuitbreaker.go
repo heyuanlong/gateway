@@ -19,6 +19,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+
+	gatelog "github.com/go-kratos/gateway/log"
 )
 
 func Init(clientFactory client.Factory) {
@@ -27,7 +29,7 @@ func Init(clientFactory client.Factory) {
 }
 
 var (
-	LOG                = log.NewHelper(log.With(log.GetLogger(), "source", "accesslog"))
+	LOG                = log.NewHelper(log.With(gatelog.GetLogger(), "source", "accesslog"))
 	_metricDeniedTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "go",
 		Subsystem: "gateway",

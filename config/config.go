@@ -16,10 +16,12 @@ import (
 	gorillamux "github.com/gorilla/mux"
 	"google.golang.org/protobuf/encoding/protojson"
 	"sigs.k8s.io/yaml"
+
+	gatelog "github.com/go-kratos/gateway/log"
 )
 
 var (
-	LOG = log.NewHelper(log.With(log.GetLogger(), "source", "config"))
+	LOG = log.NewHelper(log.With(gatelog.GetLogger(), "source", "config"))
 )
 
 type OnChange func() error

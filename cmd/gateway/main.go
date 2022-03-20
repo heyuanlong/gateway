@@ -26,6 +26,8 @@ import (
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/registry"
+
+	gatelog "github.com/go-kratos/gateway/log"
 )
 
 var (
@@ -38,7 +40,7 @@ var (
 
 var (
 	// LOG .
-	LOG = log.NewHelper(log.With(log.GetLogger(), "source", "main"))
+	LOG = log.NewHelper(log.With(gatelog.GetLogger(), "source", "main"))
 )
 
 func init() {
