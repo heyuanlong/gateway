@@ -36,6 +36,9 @@ endpoints:
           backupService: {"endpoint":{"backends":[{"target":"127.0.0.1:8001"}]}}
           assertCondtions:
           - {"by_status_code":"200"}
+    retry:
+      attempts: 2
+
   - path: /helloworld.Greeter/*
     method: POST
     timeout: 1s

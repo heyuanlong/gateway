@@ -123,6 +123,8 @@ func main() {
 	var serverHandler http.Handler = p
 	if withDebug {
 		debugService := debug.New()
+
+		//加载一些debug用的路由
 		debugService.Register("proxy", p)
 		debugService.Register("config", confLoader)
 		if ctrlLoader != nil {

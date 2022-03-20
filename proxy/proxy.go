@@ -120,7 +120,7 @@ func writeError(w http.ResponseWriter, r *http.Request, err error, protocol conf
 
 // Proxy is a gateway proxy.
 type Proxy struct {
-	readers           *sync.Pool
+	readers           *sync.Pool //对象池
 	router            atomic.Value
 	clientFactory     client.Factory
 	middlewareFactory middleware.Factory
@@ -130,7 +130,7 @@ type Proxy struct {
 func New(clientFactory client.Factory, middlewareFactory middleware.Factory) (*Proxy, error) {
 	p := &Proxy{
 		readers: &sync.Pool{
-			New: func() interface{} {
+			New: func() interface{} { //对象池的对象构建方法
 				return &BodyReader{}
 			},
 		},
@@ -141,6 +141,7 @@ func New(clientFactory client.Factory, middlewareFactory middleware.Factory) (*P
 	return p, nil
 }
 
+// 构建中间件链
 func (p *Proxy) buildMiddleware(ms []*config.Middleware, handler middleware.Handler) (middleware.Handler, error) {
 	for i := len(ms) - 1; i >= 0; i-- {
 		m, err := p.middlewareFactory(ms[i])
@@ -152,7 +153,7 @@ func (p *Proxy) buildMiddleware(ms []*config.Middleware, handler middleware.Hand
 	return handler, nil
 }
 
-//从配置里加载代理路由及其中间件
+// 从配置里加载代理路由及其中间件
 func (p *Proxy) buildEndpoint(e *config.Endpoint, ms []*config.Middleware) (http.Handler, error) {
 	caller, err := p.clientFactory(e)
 	if err != nil {
@@ -171,29 +172,39 @@ func (p *Proxy) buildEndpoint(e *config.Endpoint, ms []*config.Middleware) (http
 		return nil, err
 	}
 
+	//加载重试策略对象
 	retryStrategy, err := prepareRetryStrategy(e)
 	if err != nil {
 		return nil, err
 	}
+
 	protocol := e.Protocol.String()
+
 	return http.Handler(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		startTime := time.Now()
 		setXFFHeader(req)
 
+		// 创建携带value和超时功能的ctx
 		ctx := middleware.NewRequestContext(req.Context(), middleware.NewRequestOptions())
 		ctx, cancel := context.WithTimeout(ctx, retryStrategy.timeout)
 		defer cancel()
+
+		//从对象池获取*BodyReader对象
 		reader := p.readers.Get().(*BodyReader)
 		defer func() {
 			p.readers.Put(reader)
 			_metricRequestsDuration.WithLabelValues(protocol, req.Method, req.URL.Path).Observe(time.Since(startTime).Seconds())
 		}()
+
+		// 获取req.Body的长度
 		received, err := reader.ReadFrom(req.Body)
 		if err != nil {
 			writeError(w, req, err, e.Protocol)
 			return
 		}
 		_metricReceivedBytes.WithLabelValues(protocol, req.Method, req.URL.Path).Add(float64(received))
+
+		// 重置Body，为啥？
 		req.Body = reader
 		req.GetBody = func() (io.ReadCloser, error) {
 			reader.Seek(0, io.SeekStart)
@@ -201,8 +212,10 @@ func (p *Proxy) buildEndpoint(e *config.Endpoint, ms []*config.Middleware) (http
 		}
 
 		var resp *http.Response
+		// retryStrategy.attempts retry.go里保证了至少为1
 		for i := 0; i < int(retryStrategy.attempts); i++ {
-			if i > 0 {
+
+			if i > 0 { //第一次不计入重试
 				_metricRetryTotal.WithLabelValues(protocol, req.Method, req.URL.Path).Inc()
 			}
 			// canceled or deadline exceeded
@@ -211,15 +224,20 @@ func (p *Proxy) buildEndpoint(e *config.Endpoint, ms []*config.Middleware) (http
 			}
 			tryCtx, cancel := context.WithTimeout(ctx, retryStrategy.perTryTimeout)
 			defer cancel()
+
+			//
+			//请求后端服务
 			req.GetBody() // seek reader to start
 			resp, err = handler(tryCtx, req)
 			if err != nil {
 				LOG.Errorf("Attempt at [%d/%d], failed to handle request: %s: %+v", i+1, retryStrategy.attempts, req.URL.String(), err)
 				continue
 			}
+
+			// 判断请求后端是否成功了
 			if !judgeRetryRequired(retryStrategy.conditions, resp) {
 				if i > 0 {
-					_metricRetrySuccess.WithLabelValues(protocol, req.Method, req.URL.Path).Inc()
+					_metricRetrySuccess.WithLabelValues(protocol, req.Method, req.URL.Path).Inc() //重试成功
 				}
 				break
 			}
@@ -230,11 +248,14 @@ func (p *Proxy) buildEndpoint(e *config.Endpoint, ms []*config.Middleware) (http
 			return
 		}
 
+		//给ResponseWriter写 header
 		headers := w.Header()
 		for k, v := range resp.Header {
 			headers[k] = v
 		}
 		w.WriteHeader(resp.StatusCode)
+
+		//给ResponseWriter写 body
 		if body := resp.Body; body != nil {
 			sent, err := io.Copy(w, body)
 			if err != nil {
@@ -242,10 +263,14 @@ func (p *Proxy) buildEndpoint(e *config.Endpoint, ms []*config.Middleware) (http
 			}
 			_metricSentBytes.WithLabelValues(protocol, req.Method, req.URL.Path).Add(float64(sent))
 		}
+
+		//给ResponseWriter写 header
 		// see https://pkg.go.dev/net/http#example-ResponseWriter-Trailers
 		for k, v := range resp.Trailer {
 			headers[http.TrailerPrefix+k] = v
 		}
+
+		// 记得close resp.Body
 		if resp.Body != nil {
 			resp.Body.Close()
 		}
@@ -286,6 +311,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	p.router.Load().(router.Router).ServeHTTP(w, req)
 }
 
+// 此debug路由只是获取 endpoint的信息
 func (p *Proxy) DebugHandler() http.Handler {
 	debugMux := gorillamux.NewRouter()
 	debugMux.Methods("GET").Path("/debug/proxy/router/inspect").HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
