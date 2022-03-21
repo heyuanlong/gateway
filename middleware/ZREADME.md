@@ -3,8 +3,8 @@
 circuitbreaker          断路器
 cors                    跨域
 logging                 日志
-otel
+otel                    opentelemetry链路跟踪
 
 middleware          middleware类型定义
 registry            中间件注册器
-request             
+request             构建带request相关数据的ctx 

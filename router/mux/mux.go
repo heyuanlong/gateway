@@ -1,6 +1,8 @@
 package mux
 
 import (
+	gatelog "github.com/go-kratos/gateway/log"
+	"github.com/go-kratos/kratos/v2/log"
 	"net/http"
 	"strings"
 
@@ -8,6 +10,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+// LOG .
+var LOG = log.NewHelper(log.With(gatelog.GetLogger(), "source", "route/mux"))
+
 
 var _ = new(router.Router)
 
@@ -25,6 +31,9 @@ func NewRouter() router.Router {
 }
 
 func (r *muxRouter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	LOG.Info("muxRouter start")
+	defer LOG.Info("muxRouter end")
+
 	r.Router.ServeHTTP(w, req)
 }
 
