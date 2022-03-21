@@ -15,6 +15,8 @@ type Condition interface {
 	Judge(*http.Response) bool
 }
 
+
+//------------------------------------------------------
 type byStatusCode struct {
 	*config.Condition_ByStatusCode
 	parsedCodes []int64
@@ -37,6 +39,7 @@ func (c *byStatusCode) Prepare() error {
 	return nil
 }
 
+//存在这些code则重试
 func (c *byStatusCode) Judge(resp *http.Response) bool {
 	if len(c.parsedCodes) == 0 {
 		return false
@@ -48,6 +51,8 @@ func (c *byStatusCode) Judge(resp *http.Response) bool {
 		(int64(resp.StatusCode) <= c.parsedCodes[1])
 }
 
+
+//------------------------------------------------------
 type byHeader struct {
 	*config.Condition_ByHeader
 	parsed struct {
@@ -65,6 +70,8 @@ func (c *byHeader) Judge(resp *http.Response) bool {
 	return ok
 }
 
+
+//存在该header则重试
 func (c *byHeader) Prepare() error {
 	c.parsed.name = c.ByHeader.Name
 	c.parsed.values = map[string]struct{}{}
@@ -81,6 +88,8 @@ func (c *byHeader) Prepare() error {
 	c.parsed.values[c.ByHeader.Value] = struct{}{}
 	return nil
 }
+//------------------------------------------------------
+
 
 func parseAsStringList(in string) ([]string, error) {
 	out := []string{}
@@ -90,6 +99,7 @@ func parseAsStringList(in string) ([]string, error) {
 	return out, nil
 }
 
+//从配置里加载需要重试的后端返回状态
 func ParseConditon(in ...*config.Condition) ([]Condition, error) {
 	conditions := make([]Condition, 0, len(in))
 	for _, rawCond := range in {

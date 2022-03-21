@@ -38,6 +38,8 @@ var (
 	}, []string{"method", "path"})
 )
 
+
+//------------------------------------------------------------------
 type ratioTrigger struct {
 	*v1.CircuitBreaker_Ratio
 	lock sync.Mutex
@@ -62,12 +64,16 @@ func (r *ratioTrigger) Allow() error {
 func (*ratioTrigger) MarkSuccess() {}
 func (*ratioTrigger) MarkFailed()  {}
 
+
+//------------------------------------------------------------------
 type nopTrigger struct{}
 
 func (nopTrigger) Allow() error { return nil }
 func (nopTrigger) MarkSuccess() {}
 func (nopTrigger) MarkFailed()  {}
+//------------------------------------------------------------------
 
+//配置断路触发条件
 func makeBreakerTrigger(in *v1.CircuitBreaker) circuitbreaker.CircuitBreaker {
 	switch trigger := in.Trigger.(type) {
 	case *v1.CircuitBreaker_SuccessRatio:
@@ -93,16 +99,17 @@ func makeBreakerTrigger(in *v1.CircuitBreaker) circuitbreaker.CircuitBreaker {
 	}
 }
 
+//断路后的handler
 func makeOnBreakHandler(in *v1.CircuitBreaker, factory client.Factory) (middleware.Handler, error) {
 	switch action := in.Action.(type) {
-	case *v1.CircuitBreaker_BackupService:
+	case *v1.CircuitBreaker_BackupService: //断路后使用BackupService
 		LOG.Infof("Making backup service as on break handler: %+v", action)
 		client, err := factory(action.BackupService.Endpoint)
 		if err != nil {
 			return nil, err
 		}
 		return client.Do, nil
-	case *v1.CircuitBreaker_ResponseData:
+	case *v1.CircuitBreaker_ResponseData: //断路后返回该resp
 		LOG.Infof("Making static response data as on break handler: %+v", action)
 		body := io.NopCloser(bytes.NewBuffer(action.ResponseData.Body))
 		resp := &http.Response{
@@ -137,15 +144,22 @@ func New(factory client.Factory) middleware.Factory {
 				return nil, err
 			}
 		}
+
+		//配置断路触发条件
 		breaker := makeBreakerTrigger(options)
+
+		//断路后的handler
 		onBreakHandler, err := makeOnBreakHandler(options, factory)
 		if err != nil {
 			return nil, err
 		}
+
+		//断言后端返回的状态
 		assertCondtions, err := condition.ParseConditon(options.AssertCondtions...)
 		if err != nil {
 			return nil, err
 		}
+
 		return func(handler middleware.Handler) middleware.Handler {
 			return func(ctx context.Context, req *http.Request) (*http.Response, error) {
 				if err := breaker.Allow(); err != nil {
@@ -161,7 +175,7 @@ func New(factory client.Factory) middleware.Factory {
 					breaker.MarkFailed()
 					return onBreakHandler(ctx, req)
 				}
-				if !isSuccessResponse(assertCondtions, resp) {
+				if !isSuccessResponse(assertCondtions, resp) {   //断言assertCondtions需存在于resp，才算成功
 					breaker.MarkFailed()
 					return onBreakHandler(ctx, req)
 				}

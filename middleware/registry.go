@@ -14,11 +14,13 @@ func createFullName(name string) string {
 	return strings.ToLower("gateway.middleware." + name)
 }
 
+// 注册进入globalRegistry
 // Register registers one middleware.
 func Register(name string, factory Factory) {
 	globalRegistry.Register(name, factory)
 }
 
+// 从名称里获取Middleware
 // Create instantiates a middleware based on `cfg`.
 func Create(cfg *configv1.Middleware) (Middleware, error) {
 	return globalRegistry.Create(cfg)

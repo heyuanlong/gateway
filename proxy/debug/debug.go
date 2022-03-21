@@ -16,6 +16,8 @@ const (
 	_debugPrefix = "/debug"
 )
 
+//加载DebugHandler路由
+
 var LOG = log.NewHelper(log.With(gatelog.GetLogger(), "source", "debug"))
 
 type Debuggable interface {
@@ -44,11 +46,11 @@ func New() *DebugService {
 func (d *DebugService) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	for path, handler := range d.handlers {
 		if path == req.URL.Path {
-			handler(w, req)
+			handler(w, req)  //上面的 pprof 路由
 			return
 		}
 	}
-	d.mux.ServeHTTP(w, req)
+	d.mux.ServeHTTP(w, req) // 注册proxy，config，ctrl 的DebugHandler路由，见main.go代码
 }
 
 func (d *DebugService) Register(name string, component interface{}) {
@@ -62,6 +64,8 @@ func (d *DebugService) Register(name string, component interface{}) {
 	d.mux.PathPrefix(path).Handler(debuggable.DebugHandler())
 }
 
+
+// 分开处理 debug路由和代理路由
 func MashupWithDebugHandler(debug *DebugService, origin http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if strings.HasPrefix(req.URL.Path, _debugPrefix) {

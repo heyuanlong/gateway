@@ -1,1 +1,0 @@
-各个中间件在 func init() 里注册进 globalRegistry对象里
