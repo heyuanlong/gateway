@@ -21,6 +21,9 @@ func parseTarget(endpoint string) (*Target, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	LOG.Infof("%#v", u)
+
 	target := &Target{Scheme: u.Scheme, Authority: u.Host}
 	if len(u.Path) > 1 {
 		target.Endpoint = u.Path[1:]
